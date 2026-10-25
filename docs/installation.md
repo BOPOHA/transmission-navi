@@ -283,6 +283,12 @@ Open the playlist with VLC. **Copy link** copies the same URL for testing:
 vlc 'smb://nas-host/share/torrents/path/to/video.mkv'
 ```
 
+On Android, **Watch on TV** opens the selected SMB movie in VLC for Android.
+Use VLC's Cast button to select a Chromecast or Chromecast-enabled TV. Test
+direct TV access separately in VLC for Android TV under **Browse → Local
+network → SMB**; successful playback and seeking there confirms that the TV's
+VLC installation and stored NAS credentials can read the share.
+
 ## 7. Upgrade and reconfigure
 
 After Copr publication, upgrade normally:

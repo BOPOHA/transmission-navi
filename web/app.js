@@ -255,8 +255,18 @@
     badge.classList.toggle("ready", ready);
 
     const play = node.querySelector(".play");
+    const watchTV = node.querySelector(".watch-tv");
     const copyLink = node.querySelector(".copy-link");
     if (movie.primary_play_url) {
+      watchTV.addEventListener("click", async () => {
+        if (/Android/i.test(navigator.userAgent)) {
+          window.location.href = androidVLCIntent(movie.primary_play_url);
+          return;
+        }
+        await copyText(movie.primary_play_url);
+        watchTV.textContent = "SMB link copied";
+        setTimeout(() => { watchTV.textContent = "Watch on TV"; }, 1800);
+      });
       play.addEventListener("click", () => downloadPlaylist(movie));
       copyLink.addEventListener("click", async () => {
         await copyText(movie.primary_play_url);
@@ -264,6 +274,7 @@
         setTimeout(() => { copyLink.textContent = "Copy link"; }, 1400);
       });
     } else {
+      watchTV.disabled = true;
       play.disabled = true;
       play.textContent = "No SMB mapping";
       copyLink.disabled = true;
@@ -309,6 +320,11 @@
     const link = Object.assign(document.createElement("a"), { href, download: `${safeName(movie.title || "navi")}.m3u` });
     link.click();
     setTimeout(() => URL.revokeObjectURL(href), 1000);
+  }
+
+  function androidVLCIntent(smbURL) {
+    const target = smbURL.replace(/^smb:\/\//i, "");
+    return `intent://${target}#Intent;scheme=smb;type=video/*;package=org.videolan.vlc;end`;
   }
 
   async function copyText(value) {

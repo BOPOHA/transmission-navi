@@ -128,7 +128,9 @@ Browsers cannot start desktop VLC with an arbitrary SMB URL unless every client
 installs a custom protocol handler. Navi deliberately does not require one.
 Instead, **VLC playlist** downloads a small `.m3u` containing the canonical
 `smb://` URL. Open that playlist with VLC. **Copy link** copies the same SMB URL
-for troubleshooting or manual use.
+for troubleshooting or manual use. On Android, **Watch on TV** opens the SMB
+movie in VLC; select the Chromecast from VLC's Cast button. Chromecast does not
+open SMB URLs itself, so VLC remains responsible for reading the NAS media.
 
 ## Verification
 
