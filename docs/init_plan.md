@@ -51,6 +51,8 @@ ignored by Git.
 - Maps only paths located beneath `media_root` to `smb_prefix`.
 - Escapes individual URL path segments, including Unicode filenames.
 - Selects the largest mapped video as the title's primary playback file.
+- Classifies common `3D`, `SBS`, `OU`, `TAB`, and `MVC` filename tags so 3D
+  releases can be separated from ordinary 2D playback.
 
 ### TMDB enrichment
 
@@ -61,6 +63,8 @@ ignored by Git.
 - Normalizes supported certifications to `0`, `6`, `12`, `16`, or `18`.
 - Caches matches for 30 days and misses for 7 days using a private atomic file.
 - By default, skips TMDB calls for torrents without a playable SMB mapping.
+- Records matched, unmatched, skipped, and transient-error states per title so
+  unmatched parsed names can be reviewed in the UI.
 
 See [Create a TMDB API credential](tmdb_setup.md) for user setup and secret
 handling.
@@ -96,7 +100,8 @@ Representative movie data:
   Dexie or other runtime library is required.
 - Provides a compact searchable header, sticky desktop sidebar, mobile filter
   drawer, multi-genre tags, age groups, Transmission states, sorting, active
-  filter chips, responsive cards, and offline catalog fallback.
+  filter chips, 2D/3D selection, an unmatched-TMDB review shelf, responsive
+  cards, and offline catalog fallback.
 - Downloads M3U playlists containing canonical `smb://` URLs and can copy a
   primary SMB URL.
 - Does not use a `vlc://` custom scheme. Desktop browsers do not register that

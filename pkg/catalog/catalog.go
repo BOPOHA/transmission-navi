@@ -39,6 +39,8 @@ type Movie struct {
 	Certification  string   `json:"certification,omitempty"`
 	PosterURL      string   `json:"poster_url,omitempty"`
 	TMDBID         int      `json:"tmdb_id,omitempty"`
+	TMDBStatus     string   `json:"tmdb_status,omitempty"`
+	VideoMode      string   `json:"video_mode"`
 	DownloadDir    string   `json:"download_dir"`
 	Finished       bool     `json:"finished"`
 	PercentDone    int      `json:"percent_done"`
@@ -60,10 +62,22 @@ func Build(torrents []transmission.Torrent, mediaRoot, smbPrefix string, now tim
 	movies := make([]Movie, 0, len(torrents))
 	for _, torrent := range torrents {
 		title, year := parser.Title(torrent.Name)
+		mediaNames := make([]string, 1, len(torrent.Files)+1)
+		mediaNames[0] = torrent.Name
+		for _, source := range torrent.Files {
+			if videoExtensions[strings.ToLower(filepath.Ext(source.Name))] {
+				mediaNames = append(mediaNames, source.Name)
+			}
+		}
+		videoMode := "2d"
+		if parser.Is3D(mediaNames...) {
+			videoMode = "3d"
+		}
 		movie := Movie{
 			ID: torrent.ID, HashString: torrent.HashString, TorrentName: torrent.Name,
 			Title: title, Year: year, DownloadDir: torrent.DownloadDir,
-			Finished: torrent.IsFinished, PercentDone: percent(torrent.PercentDone),
+			VideoMode: videoMode,
+			Finished:  torrent.IsFinished, PercentDone: percent(torrent.PercentDone),
 			Status: statusName(torrent.Status), Files: make([]File, 0, len(torrent.Files)),
 		}
 		if torrent.AddedDate > 0 {

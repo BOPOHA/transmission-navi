@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const state = { movies: [], query: "", status: "all", genres: new Set(), age: "all", sort: "added" };
+  const state = { movies: [], query: "", status: "all", video: "all", genres: new Set(), age: "all", sort: "added" };
   const elements = {
     catalog: document.querySelector("#catalog"),
     empty: document.querySelector("#empty"),
@@ -92,13 +92,16 @@
       const matchesStatus = state.status === "all" ||
         (state.status === "ready" && playable && movie.percent_done === 100) ||
         (state.status === "active" && movie.percent_done < 100) ||
-        (state.status === "stopped" && movie.status === "stopped");
+        (state.status === "stopped" && movie.status === "stopped") ||
+        (state.status === "tmdb_not_found" && movie.tmdb_status === "not_found");
+      const videoMode = movie.video_mode || "2d";
+      const matchesVideo = state.video === "all" || state.video === videoMode;
       const matchesGenres = [...state.genres].every(genre => (movie.genres || []).includes(genre));
       const matchesAge = state.age === "all" ||
         (state.age === "unrated" && movie.min_age == null) ||
         (state.age === "18" && movie.min_age === 18) ||
         (!Number.isNaN(Number(state.age)) && state.age !== "18" && movie.min_age != null && movie.min_age <= Number(state.age));
-      return matchesQuery && matchesStatus && matchesGenres && matchesAge;
+      return matchesQuery && matchesStatus && matchesVideo && matchesGenres && matchesAge;
     });
     movies.sort(comparator(state.sort));
 
@@ -115,7 +118,8 @@
       all: state.movies.length,
       ready: state.movies.filter(movie => movie.primary_play_url && movie.percent_done === 100).length,
       active: state.movies.filter(movie => movie.percent_done < 100).length,
-      stopped: state.movies.filter(movie => movie.status === "stopped").length
+      stopped: state.movies.filter(movie => movie.status === "stopped").length,
+      tmdb_not_found: state.movies.filter(movie => movie.tmdb_status === "not_found").length
     };
     Object.entries(statusCounts).forEach(([name, count]) => {
       const target = document.querySelector(`[data-count="${name}"]`);
@@ -160,12 +164,17 @@
       button.classList.toggle("active", active);
       button.setAttribute("aria-pressed", String(active));
     });
+    document.querySelectorAll("[data-video]").forEach(button => {
+      const active = button.dataset.video === state.video;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
     elements.genreFilters.querySelectorAll("[data-genre]").forEach(button => {
       button.classList.toggle("active", state.genres.has(button.dataset.genre));
       button.setAttribute("aria-pressed", String(state.genres.has(button.dataset.genre)));
     });
 
-    const activeCount = state.genres.size + Number(state.status !== "all") + Number(state.age !== "all");
+    const activeCount = state.genres.size + Number(state.status !== "all") + Number(state.video !== "all") + Number(state.age !== "all");
     elements.filterCount.hidden = activeCount === 0;
     elements.filterCount.textContent = activeCount;
     elements.clearAll.disabled = activeCount === 0;
@@ -176,6 +185,7 @@
   function renderActiveChips() {
     const chips = [];
     if (state.status !== "all") chips.push(filterChip(statusLabel(state.status), () => { state.status = "all"; render(); }));
+    if (state.video !== "all") chips.push(filterChip(state.video === "3d" ? "3D · Quest" : "2D", () => { state.video = "all"; render(); }));
     if (state.age !== "all") chips.push(filterChip(ageLabel(state.age), () => { state.age = "all"; render(); }));
     [...state.genres].sort().forEach(genre => chips.push(filterChip(genre, () => { state.genres.delete(genre); render(); })));
     elements.activeFilters.replaceChildren(...chips);
@@ -195,7 +205,7 @@
   }
 
   function statusLabel(status) {
-    return { all: "All media", ready: "Ready to play", active: "In progress", stopped: "Stopped" }[status] || "All media";
+    return { all: "All media", ready: "Ready to play", active: "In progress", stopped: "Stopped", tmdb_not_found: "TMDB not found" }[status] || "All media";
   }
 
   function ageLabel(age) {
@@ -210,11 +220,18 @@
     node.querySelector("h3").textContent = movie.title || movie.torrent_name;
     node.querySelector(".cover-letter").textContent = firstLetter(movie.title);
     node.querySelector(".cover-year").textContent = movie.year || "—";
+    node.querySelector(".video-mode").hidden = (movie.video_mode || "2d") !== "3d";
     node.querySelector(".year").textContent = movie.year || "Unknown year";
     node.querySelector(".size").textContent = formatBytes(totalSize(movie.files));
     node.querySelector(".rating").textContent = movie.rating_tmdb ? `★ ${Number(movie.rating_tmdb).toFixed(1)}` : "";
     node.querySelector(".age").textContent = movie.min_age != null ? `${movie.min_age}+` : "";
     node.querySelector("h3").title = movie.overview || movie.title || "";
+    if (movie.tmdb_status === "not_found") {
+      const tmdbNote = node.querySelector(".tmdb-note");
+      const lookup = `${movie.title || "Unknown title"}${movie.year ? ` (${movie.year})` : ""}`;
+      tmdbNote.textContent = `TMDB did not find “${lookup}”. Source: ${movie.torrent_name}`;
+      tmdbNote.hidden = false;
+    }
     const genres = node.querySelector(".genres");
     (movie.genres || []).slice(0, 3).forEach(name => {
       const genre = document.createElement("span");
@@ -355,9 +372,14 @@
     state.age = button.dataset.age;
     render();
   }));
+  document.querySelectorAll("[data-video]").forEach(button => button.addEventListener("click", () => {
+    state.video = button.dataset.video;
+    render();
+  }));
   elements.clearGenres.addEventListener("click", () => { state.genres.clear(); render(); });
   elements.clearAll.addEventListener("click", () => {
     state.status = "all";
+    state.video = "all";
     state.age = "all";
     state.genres.clear();
     render();

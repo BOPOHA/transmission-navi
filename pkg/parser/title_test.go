@@ -19,3 +19,22 @@ func TestTitle(t *testing.T) {
 		}
 	}
 }
+
+func TestIs3D(t *testing.T) {
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{"Avatar.2009.3D.HSBS.1080p.mkv", true},
+		{"Dune 3D Half-OU BluRay", true},
+		{"movie/MVC/main.mkv", true},
+		{"Nature Side by Side 2025.mp4", true},
+		{"Apollo 13 1995 1080p.mkv", false},
+		{"Three Days 2024 3Disc BluRay", false},
+	}
+	for _, test := range tests {
+		if got := Is3D(test.name); got != test.want {
+			t.Errorf("Is3D(%q) = %v; want %v", test.name, got, test.want)
+		}
+	}
+}

@@ -45,7 +45,17 @@
           <button class="browse-option" type="button" data-status="ready"><span><i class="option-dot ready"></i>Ready to play</span><span class="option-count" data-count="ready">0</span></button>
           <button class="browse-option" type="button" data-status="active"><span><i class="option-dot active"></i>In progress</span><span class="option-count" data-count="active">0</span></button>
           <button class="browse-option" type="button" data-status="stopped"><span><i class="option-dot stopped"></i>Stopped</span><span class="option-count" data-count="stopped">0</span></button>
+          <button class="browse-option" type="button" data-status="tmdb_not_found"><span><i class="option-dot unmatched"></i>TMDB not found</span><span class="option-count" data-count="tmdb_not_found">0</span></button>
         </nav>
+
+        <section class="filter-group">
+          <h3>Video mode</h3>
+          <div class="mode-filters">
+            <button class="mode-option active" type="button" data-video="all">Any</button>
+            <button class="mode-option" type="button" data-video="2d">2D</button>
+            <button class="mode-option" type="button" data-video="3d">3D · Quest</button>
+          </div>
+        </section>
 
         <section class="filter-group">
           <div class="filter-group-head"><h3>Genres</h3><button id="clear-genres" type="button" hidden>Clear</button></div>
@@ -82,10 +92,11 @@
 
   <template id="card-template">
     <article class="card">
-      <div class="cover"><img class="cover-poster" alt="" loading="lazy"><div class="cover-grain"></div><span class="cover-year"></span><span class="cover-letter"></span><div class="progress"><span></span></div></div>
+      <div class="cover"><img class="cover-poster" alt="" loading="lazy"><div class="cover-grain"></div><span class="cover-year"></span><span class="video-mode" hidden>3D</span><span class="cover-letter"></span><div class="progress"><span></span></div></div>
       <div class="card-body">
         <div class="card-title-row"><h3></h3><button class="more" type="button" aria-label="Show files">•••</button></div>
         <p class="meta"><span class="year"></span><span class="dot">•</span><span class="size"></span><span class="rating"></span><span class="age"></span></p>
+        <p class="tmdb-note" hidden></p>
         <div class="genres"></div>
         <div class="status-row"><span class="badge"></span><span class="progress-label"></span></div>
         <div class="actions"><button class="play button" type="button">VLC playlist</button><button class="copy-link button secondary" type="button">Copy link</button></div>

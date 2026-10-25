@@ -10,12 +10,14 @@ offline catalog caching, and VLC-compatible playlists.
 
 - Transmission RPC client with automatic session-ID (`409`) retry
 - Filename cleanup and title/year extraction
+- Automatic 2D/3D classification from common stereoscopic release tags
 - TMDB posters, localized titles, genres, ratings, and age certifications
+- A review shelf for titles that TMDB could not match
 - Persistent TMDB cache (30 days for matches, 7 days for misses)
 - Filesystem-to-SMB path mapping with URL-safe filenames
 - Atomic `catalog.json` publication
 - Responsive desktop sidebar and mobile filter drawer
-- Search, download state, genre, age, and sorting controls
+- Search, download state, 2D/3D, genre, age, and sorting controls
 - IndexedDB fallback to the latest browser-side catalog
 - Per-title and per-file M3U playlist generation
 

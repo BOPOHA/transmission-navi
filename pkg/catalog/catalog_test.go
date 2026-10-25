@@ -22,6 +22,19 @@ func TestBuildMapsNASPathToSMB(t *testing.T) {
 	if data.Movies[0].Title != "The Addams Family" || data.Movies[0].Year != 1991 {
 		t.Fatalf("unexpected parsed metadata: %#v", data.Movies[0])
 	}
+	if data.Movies[0].VideoMode != "2d" {
+		t.Fatalf("unexpected video mode: %s", data.Movies[0].VideoMode)
+	}
+}
+
+func TestBuildDetects3DFromMediaFile(t *testing.T) {
+	data := Build([]transmission.Torrent{{
+		ID: 2, Name: "Avatar 2009", DownloadDir: "/media/library",
+		Files: []transmission.File{{Name: "Avatar.2009.HSBS.3D.mkv", Length: 42}},
+	}}, "/media/library", "smb://example-nas/media", time.Unix(10, 0))
+	if data.Movies[0].VideoMode != "3d" {
+		t.Fatalf("unexpected video mode: %s", data.Movies[0].VideoMode)
+	}
 }
 
 func TestWriteAtomic(t *testing.T) {

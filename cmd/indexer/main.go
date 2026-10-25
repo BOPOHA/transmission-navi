@@ -68,6 +68,7 @@ func enrichTMDB(output *catalog.Catalog, cfg config.Config, httpClient *http.Cli
 	for index := range output.Movies {
 		movie := &output.Movies[index]
 		if !cfg.TMDBEnrichUnmapped && movie.PrimaryPlayURL == "" {
+			movie.TMDBStatus = "not_checked"
 			continue
 		}
 		entry, cached := cache.Get(movie.Title, movie.Year, cfg.TMDBLanguage, now)
@@ -75,8 +76,10 @@ func enrichTMDB(output *catalog.Catalog, cfg config.Config, httpClient *http.Cli
 			cacheHits++
 			if entry.Found {
 				applyTMDB(movie, entry.Metadata)
+				movie.TMDBStatus = "matched"
 				enriched++
 			} else {
+				movie.TMDBStatus = "not_found"
 				notFound++
 			}
 			continue
@@ -90,15 +93,18 @@ func enrichTMDB(output *catalog.Catalog, cfg config.Config, httpClient *http.Cli
 			}
 			if lookupErr == tmdb.ErrNotFound {
 				cache.Put(movie.Title, movie.Year, cfg.TMDBLanguage, tmdb.Metadata{}, false, now)
+				movie.TMDBStatus = "not_found"
 				notFound++
 				continue
 			}
 			failures++
+			movie.TMDBStatus = "error"
 			log.Printf("TMDB lookup failed for %q: %v", movie.Title, lookupErr)
 			continue
 		}
 		cache.Put(movie.Title, movie.Year, cfg.TMDBLanguage, metadata, true, now)
 		applyTMDB(movie, metadata)
+		movie.TMDBStatus = "matched"
 		enriched++
 	}
 	if err := cache.WriteAtomic(cfg.TMDBCachePath); err != nil {

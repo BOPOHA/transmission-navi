@@ -11,7 +11,13 @@ var (
 	yearPattern = regexp.MustCompile(`(?:^|[ ._\-(])((?:19|20)\d{2})(?:$|[ ._)\]-])`)
 	tagPattern  = regexp.MustCompile(`(?i)\b(?:2160p|1080p|720p|480p|4k|uhd|bluray|blu-ray|bdrip|brrip|web[ ._-]?dl|webrip|hdrip|dvdrip|remux|x26[45]|h[ ._-]?26[45]|hevc|av1|hdr10\+?|hdr|dolby[ ._-]?vision|dovi|aac(?:2\.0)?|ac3|eac3|ddp?\d(?:\.\d)?|dts(?:-hd)?|truehd|atmos|multi|proper|repack|extended|unrated)\b.*$`)
 	spaces      = regexp.MustCompile(`\s+`)
+	nonAlphaNum = regexp.MustCompile(`[^A-Z0-9]+`)
 )
+
+var threeDTags = map[string]bool{
+	"3D": true, "SBS": true, "HSBS": true, "FSBS": true,
+	"OU": true, "HOU": true, "FOU": true, "TAB": true, "MVC": true,
+}
 
 // Title extracts a human-readable title and likely release year from a torrent name.
 func Title(name string) (string, int) {
@@ -28,6 +34,28 @@ func Title(name string) (string, int) {
 		base = strings.TrimSpace(name)
 	}
 	return titleCase(base), year
+}
+
+// Is3D recognizes the common stereoscopic tags used in torrent and media
+// filenames. Values should include both the torrent name and its file names so
+// releases whose 3D marker appears in only one of those places are detected.
+func Is3D(values ...string) bool {
+	for _, value := range values {
+		normalized := nonAlphaNum.ReplaceAllString(strings.ToUpper(value), " ")
+		fields := strings.Fields(normalized)
+		for _, field := range fields {
+			if threeDTags[field] {
+				return true
+			}
+		}
+		phrase := " " + strings.Join(fields, " ") + " "
+		if strings.Contains(phrase, " SIDE BY SIDE ") ||
+			strings.Contains(phrase, " TOP BOTTOM ") ||
+			strings.Contains(phrase, " OVER UNDER ") {
+			return true
+		}
+	}
+	return false
 }
 
 func titleCase(value string) string {

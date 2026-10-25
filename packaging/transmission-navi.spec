@@ -3,7 +3,7 @@
 
 Name:           transmission-navi
 Version:        0.1.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Static media catalog and browser for Transmission
 
 License:        MIT
@@ -84,6 +84,10 @@ install -m644 docs/*.md %{buildroot}%{_docdir}/transmission-navi/docs/
 %dir %attr(0750,transmission,transmission) %{_localstatedir}/cache/transmission-navi
 
 %changelog
+* Sun Oct 25 2026 Anatolii Vorona <vorona.tolik@gmail.com> - 0.1.0-5
+- Add 2D and 3D media filtering with Quest-oriented labels
+- Add a review shelf for titles that TMDB could not match
+
 * Sun Oct 25 2026 Anatolii Vorona <vorona.tolik@gmail.com> - 0.1.0-4
 - Keep RPM systemd integration limited to the catalog indexer timer
 
