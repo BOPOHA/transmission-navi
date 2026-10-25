@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -17,6 +18,23 @@ import (
 var videoExtensions = map[string]bool{
 	".mkv": true, ".mp4": true, ".avi": true, ".mov": true,
 	".m4v": true, ".webm": true, ".mpg": true, ".mpeg": true, ".ts": true,
+}
+
+var (
+	seasonPattern       = regexp.MustCompile(`(?i)(?:^|[ ./_\-\[(])s\d{1,2}(?:e\d{1,3})?(?:$|[ ./_\-\])])|(?:season|сезон)[ ._\-]*\d+`)
+	episodePattern      = regexp.MustCompile(`(?i)(?:^|[ ./_\-\[(])(?:(?:e|ep)\d{1,3}|\d{1,2}x\d{1,3})(?:$|[ ./_\-\])])|(?:^|[ ./_\-\[(])\d{1,3}[ ._\-]*(?:сер(?:ия|ии)?|эпизод|выпуск)(?:$|[ ._\-\])])|(?:^|[ ./_\-\[(])(?:сер(?:ия|ии)?|эпизод|выпуск)(?:$|[ ._\-\])])|(?:^|[ ./_\-\[(])\d{2}[._-]\d{2,3}(?:$|[ ./_\-\])])`)
+	extraPattern        = regexp.MustCompile(`(?i)(?:^|[ ._\-/\[(])(?:sample|trailer|tlr[ ._\-]*\d*|тизер|трейлер|featurette|bonus)(?:$|[ ._\-/\])])`)
+	qualityPattern      = regexp.MustCompile(`(?i)[ ._\-]*(?:\(?\s*(?:2160p|1080p|720p|480p|4k|uhd|hd)\s*\)?).*$`)
+	identityPunctuation = regexp.MustCompile(`[^\p{L}\p{N}]+`)
+	leadingNumber       = regexp.MustCompile(`^\d{1,3}\s+(.+)$`)
+	trailingNumber      = regexp.MustCompile(`^(.+?)\s+\d{1,3}$`)
+)
+
+type mediaFile struct {
+	source transmission.File
+	file   File
+	title  string
+	year   int
 }
 
 type Catalog struct {
@@ -61,46 +79,155 @@ type File struct {
 func Build(torrents []transmission.Torrent, mediaRoot, smbPrefix string, now time.Time) Catalog {
 	movies := make([]Movie, 0, len(torrents))
 	for _, torrent := range torrents {
-		title, year := parser.Title(torrent.Name)
-		mediaNames := make([]string, 1, len(torrent.Files)+1)
-		mediaNames[0] = torrent.Name
-		for _, source := range torrent.Files {
-			if videoExtensions[strings.ToLower(filepath.Ext(source.Name))] {
-				mediaNames = append(mediaNames, source.Name)
-			}
-		}
-		videoMode := "2d"
-		if parser.Is3D(mediaNames...) {
-			videoMode = "3d"
-		}
-		movie := Movie{
-			ID: torrent.ID, HashString: torrent.HashString, TorrentName: torrent.Name,
-			Title: title, Year: year, DownloadDir: torrent.DownloadDir,
-			VideoMode: videoMode,
-			Finished:  torrent.IsFinished, PercentDone: percent(torrent.PercentDone),
-			Status: statusName(torrent.Status), Files: make([]File, 0, len(torrent.Files)),
-		}
-		if torrent.AddedDate > 0 {
-			movie.AddedAt = time.Unix(torrent.AddedDate, 0).UTC().Format(time.RFC3339)
-		}
+		files := make([]mediaFile, 0, len(torrent.Files))
 		for _, source := range torrent.Files {
 			playable := videoExtensions[strings.ToLower(filepath.Ext(source.Name))]
 			playURL := ""
 			if playable {
 				playURL = mapSMB(filepath.Join(torrent.DownloadDir, filepath.FromSlash(source.Name)), mediaRoot, smbPrefix)
 			}
-			file := File{Name: source.Name, Size: source.Length, BytesCompleted: source.BytesCompleted, Playable: playable, PlayURL: playURL}
-			movie.Files = append(movie.Files, file)
-			if playURL != "" && (movie.PrimaryPlayURL == "" || source.Length > primarySize(movie.Files, movie.PrimaryPlayURL)) {
-				movie.PrimaryPlayURL = playURL
+			title, year := "", 0
+			if playable {
+				title, year = parser.Title(qualityPattern.ReplaceAllString(filepath.Base(source.Name), ""))
 			}
+			files = append(files, mediaFile{source: source, file: File{Name: source.Name, Size: source.Length, BytesCompleted: source.BytesCompleted, Playable: playable, PlayURL: playURL}, title: title, year: year})
 		}
-		movies = append(movies, movie)
+
+		groups := movieGroups(torrent.Name, files)
+		if len(groups) > 1 {
+			for _, group := range groups {
+				movies = append(movies, buildMovie(torrent, group[0].title, group[0].year, group, true))
+			}
+			continue
+		}
+
+		title, year := parser.Title(torrent.Name)
+		movies = append(movies, buildMovie(torrent, title, year, files, false))
 	}
 	sort.SliceStable(movies, func(i, j int) bool {
 		return strings.ToLower(movies[i].Title) < strings.ToLower(movies[j].Title)
 	})
 	return Catalog{Version: now.UnixMilli(), UpdatedAt: now.UTC().Format(time.RFC3339), Movies: movies}
+}
+
+func buildMovie(torrent transmission.Torrent, title string, year int, files []mediaFile, fileProgress bool) Movie {
+	mediaNames := make([]string, 0, len(files)+1)
+	if !fileProgress {
+		mediaNames = append(mediaNames, torrent.Name)
+	}
+	movie := Movie{
+		ID: torrent.ID, HashString: torrent.HashString, TorrentName: torrent.Name,
+		Title: title, Year: year, DownloadDir: torrent.DownloadDir,
+		VideoMode: "2d", Finished: torrent.IsFinished, PercentDone: percent(torrent.PercentDone),
+		Status: statusName(torrent.Status), Files: make([]File, 0, len(files)),
+	}
+	if torrent.AddedDate > 0 {
+		movie.AddedAt = time.Unix(torrent.AddedDate, 0).UTC().Format(time.RFC3339)
+	}
+	var primary *mediaFile
+	for index := range files {
+		item := &files[index]
+		movie.Files = append(movie.Files, item.file)
+		if item.file.Playable {
+			mediaNames = append(mediaNames, item.source.Name)
+		}
+		if item.file.Playable && (primary == nil || item.source.Length > primary.source.Length) {
+			primary = item
+		}
+	}
+	if parser.Is3D(mediaNames...) {
+		movie.VideoMode = "3d"
+	}
+	if primary != nil {
+		movie.PrimaryPlayURL = primary.file.PlayURL
+		if fileProgress && primary.source.Length > 0 {
+			movie.PercentDone = percent(float64(primary.source.BytesCompleted) / float64(primary.source.Length))
+			movie.Finished = primary.source.BytesCompleted >= primary.source.Length
+		}
+	}
+	return movie
+}
+
+// movieGroups returns one group per distinct movie in a multi-film torrent.
+// Obvious seasons remain one catalog entry, and alternate encodes with the
+// same parsed title and year remain available together in one playlist.
+func movieGroups(torrentName string, files []mediaFile) [][]mediaFile {
+	playable := make([]mediaFile, 0, len(files))
+	var largest int64
+	for _, item := range files {
+		if item.file.Playable && item.source.Length > largest {
+			largest = item.source.Length
+		}
+	}
+	for _, item := range files {
+		if !item.file.Playable || extraPattern.MatchString(item.source.Name) {
+			continue
+		}
+		if largest > 0 && item.source.Length < largest/20 && item.source.Length < 250*1024*1024 {
+			continue
+		}
+		playable = append(playable, item)
+	}
+	if len(playable) < 2 || isEpisodic(torrentName, playable) {
+		return nil
+	}
+
+	groups := make([][]mediaFile, 0, len(playable))
+	indexes := make(map[string]int)
+	for _, item := range playable {
+		key := movieIdentity(item.title, item.year)
+		if index, ok := indexes[key]; ok {
+			groups[index] = append(groups[index], item)
+			continue
+		}
+		indexes[key] = len(groups)
+		groups = append(groups, []mediaFile{item})
+	}
+	if len(groups) < 2 {
+		return nil
+	}
+	return groups
+}
+
+func movieIdentity(title string, year int) string {
+	normalized := strings.ToLower(identityPunctuation.ReplaceAllString(title, ""))
+	return fmt.Sprintf("%s:%d", normalized, year)
+}
+
+func isEpisodic(torrentName string, files []mediaFile) bool {
+	if seasonPattern.MatchString(torrentName) || episodePattern.MatchString(torrentName) {
+		return true
+	}
+	for _, item := range files {
+		if seasonPattern.MatchString(item.source.Name) || episodePattern.MatchString(item.source.Name) {
+			return true
+		}
+	}
+	return isNumberedSeries(files)
+}
+
+func isNumberedSeries(files []mediaFile) bool {
+	if len(files) < 3 {
+		return false
+	}
+	leadingBase := ""
+	allLeading := true
+	allTrailing := true
+	for _, item := range files {
+		title := strings.ToLower(strings.TrimSpace(item.title))
+		match := leadingNumber.FindStringSubmatch(title)
+		if len(match) != 2 {
+			allLeading = false
+		} else if leadingBase == "" {
+			leadingBase = match[1]
+		} else if leadingBase != match[1] {
+			allLeading = false
+		}
+		if !trailingNumber.MatchString(title) {
+			allTrailing = false
+		}
+	}
+	return allLeading || (len(files) >= 8 && allTrailing)
 }
 
 func WriteAtomic(filename string, data Catalog) error {
@@ -147,15 +274,6 @@ func mapSMB(filename, mediaRoot, smbPrefix string) string {
 		parts[i] = url.PathEscape(part)
 	}
 	return strings.TrimRight(smbPrefix, "/") + "/" + strings.Join(parts, "/")
-}
-
-func primarySize(files []File, playURL string) int64 {
-	for _, file := range files {
-		if file.PlayURL == playURL {
-			return file.Size
-		}
-	}
-	return 0
 }
 
 func percent(value float64) int {

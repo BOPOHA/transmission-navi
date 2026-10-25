@@ -12,6 +12,7 @@ import (
 )
 
 const cacheVersion = 1
+const lookupVersion = 2
 
 type Cache struct {
 	Version int                   `json:"version"`
@@ -19,9 +20,10 @@ type Cache struct {
 }
 
 type CacheEntry struct {
-	Found     bool     `json:"found"`
-	Metadata  Metadata `json:"metadata,omitempty"`
-	UpdatedAt string   `json:"updated_at"`
+	Found         bool     `json:"found"`
+	Metadata      Metadata `json:"metadata,omitempty"`
+	UpdatedAt     string   `json:"updated_at"`
+	LookupVersion int      `json:"lookup_version,omitempty"`
 }
 
 func LoadCache(filename string) (*Cache, error) {
@@ -50,6 +52,11 @@ func (c *Cache) Get(title string, year int, language string, now time.Time) (Cac
 	if !ok {
 		return CacheEntry{}, false
 	}
+	// Preserve old positive metadata, but retry misses created before the
+	// transliterated-title fallback was introduced.
+	if !entry.Found && entry.LookupVersion < lookupVersion {
+		return CacheEntry{}, false
+	}
 	updated, err := time.Parse(time.RFC3339, entry.UpdatedAt)
 	if err != nil {
 		return CacheEntry{}, false
@@ -66,7 +73,7 @@ func (c *Cache) Get(title string, year int, language string, now time.Time) (Cac
 
 func (c *Cache) Put(title string, year int, language string, metadata Metadata, found bool, now time.Time) {
 	c.Entries[cacheKey(title, year, language)] = CacheEntry{
-		Found: found, Metadata: metadata, UpdatedAt: now.UTC().Format(time.RFC3339),
+		Found: found, Metadata: metadata, UpdatedAt: now.UTC().Format(time.RFC3339), LookupVersion: lookupVersion,
 	}
 }
 

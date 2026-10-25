@@ -11,6 +11,10 @@ func TestTitle(t *testing.T) {
 		{"The.Addams.Family.1991.1080p.BluRay.x264.mkv", "The Addams Family", 1991},
 		{"Dune Part Two (2024) 2160p WEB-DL", "Dune Part Two", 2024},
 		{"MY_MOVIE_1080p_WEBRip", "MY MOVIE", 0},
+		{"Fargo LostFilm", "Fargo", 0},
+		{"Fargo [teko]", "Fargo", 0},
+		{"Example.by.Nicodem.Files-x", "Example", 0},
+		{"The Lost Film", "The Lost Film", 0},
 	}
 	for _, test := range tests {
 		title, year := Title(test.input)

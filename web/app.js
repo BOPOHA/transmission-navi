@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const state = { movies: [], query: "", status: "all", video: "all", genres: new Set(), age: "all", sort: "added" };
+  const state = { movies: [], query: "", status: "all", video: "2d", genres: new Set(), age: "all", sort: "added" };
   const elements = {
     catalog: document.querySelector("#catalog"),
     empty: document.querySelector("#empty"),
@@ -229,7 +229,9 @@
     if (movie.tmdb_status === "not_found") {
       const tmdbNote = node.querySelector(".tmdb-note");
       const lookup = `${movie.title || "Unknown title"}${movie.year ? ` (${movie.year})` : ""}`;
-      tmdbNote.textContent = `TMDB did not find “${lookup}”. Source: ${movie.torrent_name}`;
+      tmdbNote.querySelector("span").textContent = `TMDB did not find “${lookup}”. Source: ${movie.torrent_name}`;
+      const kinopoisk = tmdbNote.querySelector("a");
+      kinopoisk.href = `https://www.kinopoisk.ru/index.php?kp_query=${encodeURIComponent(lookup)}`;
       tmdbNote.hidden = false;
     }
     const genres = node.querySelector(".genres");
@@ -255,17 +257,17 @@
     badge.classList.toggle("ready", ready);
 
     const play = node.querySelector(".play");
-    const watchTV = node.querySelector(".watch-tv");
+    const playDevice = node.querySelector(".play-device");
     const copyLink = node.querySelector(".copy-link");
     if (movie.primary_play_url) {
-      watchTV.addEventListener("click", async () => {
+      playDevice.addEventListener("click", async () => {
         if (/Android/i.test(navigator.userAgent)) {
           window.location.href = androidVLCIntent(movie.primary_play_url);
           return;
         }
         await copyText(movie.primary_play_url);
-        watchTV.textContent = "SMB link copied";
-        setTimeout(() => { watchTV.textContent = "Watch on TV"; }, 1800);
+        playDevice.textContent = "SMB link copied";
+        setTimeout(() => { playDevice.textContent = "Play on this device"; }, 1800);
       });
       play.addEventListener("click", () => downloadPlaylist(movie));
       copyLink.addEventListener("click", async () => {
@@ -274,7 +276,7 @@
         setTimeout(() => { copyLink.textContent = "Copy link"; }, 1400);
       });
     } else {
-      watchTV.disabled = true;
+      playDevice.disabled = true;
       play.disabled = true;
       play.textContent = "No SMB mapping";
       copyLink.disabled = true;

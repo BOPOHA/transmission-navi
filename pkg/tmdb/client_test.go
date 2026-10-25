@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -48,5 +49,35 @@ func TestLookupNotFound(t *testing.T) {
 	_, err := NewWithBaseURL(server.URL, "token", "en-US", server.Client()).Lookup(context.Background(), "Missing", 2020)
 	if err != ErrNotFound {
 		t.Fatalf("got %v, want ErrNotFound", err)
+	}
+}
+
+func TestLookupRetriesRussianTransliteration(t *testing.T) {
+	queries := make([]string, 0, 2)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/search/movie":
+			query := r.URL.Query().Get("query")
+			queries = append(queries, query)
+			if query == "Немыслимое" {
+				_, _ = w.Write([]byte(`{"results":[{"id":43539,"title":"Unthinkable","original_title":"Unthinkable","release_date":"2010-06-14"}]}`))
+			} else {
+				_, _ = w.Write([]byte(`{"results":[]}`))
+			}
+		case "/movie/43539":
+			_, _ = w.Write([]byte(`{"id":43539,"title":"Unthinkable","original_title":"Unthinkable","release_date":"2010-06-14","genres":[],"release_dates":{"results":[]}}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	metadata, err := NewWithBaseURL(server.URL, "token", "en-US", server.Client()).Lookup(context.Background(), "Nemyslimoe", 2010)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if metadata.ID != 43539 || !reflect.DeepEqual(queries, []string{"Nemyslimoe", "Немыслимое"}) {
+		t.Fatalf("unexpected fallback: metadata=%#v queries=%#v", metadata, queries)
 	}
 }

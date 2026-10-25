@@ -103,20 +103,28 @@ func NewWithBaseURL(baseURL, token, language string, httpClient *http.Client) *C
 }
 
 func (c *Client) Lookup(ctx context.Context, title string, year int) (Metadata, error) {
-	query := url.Values{"query": {title}, "language": {c.language}}
-	if year > 0 {
-		query.Set("year", strconv.Itoa(year))
+	var match searchResult
+	found := false
+	for _, candidate := range lookupTitleVariants(title) {
+		query := url.Values{"query": {candidate}, "language": {c.language}}
+		if year > 0 {
+			query.Set("year", strconv.Itoa(year))
+		}
+		var search searchResponse
+		if err := c.get(ctx, "/search/movie", query, &search); err != nil {
+			return Metadata{}, err
+		}
+		if len(search.Results) != 0 {
+			match = bestMatch(search.Results, candidate, year)
+			found = true
+			break
+		}
 	}
-	var search searchResponse
-	if err := c.get(ctx, "/search/movie", query, &search); err != nil {
-		return Metadata{}, err
-	}
-	if len(search.Results) == 0 {
+	if !found {
 		return Metadata{}, ErrNotFound
 	}
-	match := bestMatch(search.Results, title, year)
 
-	query = url.Values{"language": {c.language}, "append_to_response": {"release_dates"}}
+	query := url.Values{"language": {c.language}, "append_to_response": {"release_dates"}}
 	var details detailsResponse
 	if err := c.get(ctx, "/movie/"+strconv.Itoa(match.ID), query, &details); err != nil {
 		return Metadata{}, err

@@ -26,3 +26,17 @@ func TestCacheRoundTrip(t *testing.T) {
 		t.Fatalf("unexpected cache entry: %#v, %v", entry, ok)
 	}
 }
+
+func TestCacheRetriesOldMissAfterLookupUpgrade(t *testing.T) {
+	now := time.Date(2026, 10, 25, 12, 0, 0, 0, time.UTC)
+	cache := &Cache{Version: cacheVersion, Entries: map[string]CacheEntry{}}
+	key := cacheKey("Nemyslimoe", 2010, "en-US")
+	cache.Entries[key] = CacheEntry{Found: false, UpdatedAt: now.Format(time.RFC3339)}
+	if _, ok := cache.Get("Nemyslimoe", 2010, "en-US", now); ok {
+		t.Fatal("old negative entry should be retried")
+	}
+	cache.Put("Nemyslimoe", 2010, "en-US", Metadata{}, false, now)
+	if _, ok := cache.Get("Nemyslimoe", 2010, "en-US", now); !ok {
+		t.Fatal("current negative entry should remain cached")
+	}
+}

@@ -3,7 +3,7 @@
 
 Name:           transmission-navi
 Version:        0.1.0
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Static media catalog and browser for Transmission
 
 License:        MIT
@@ -84,6 +84,11 @@ install -m644 docs/*.md %{buildroot}%{_docdir}/transmission-navi/docs/
 %dir %attr(0750,transmission,transmission) %{_localstatedir}/cache/transmission-navi
 
 %changelog
+* Sun Oct 25 2026 Anatolii Vorona <vorona.tolik@gmail.com> - 0.1.0-7
+- Split multi-film torrents while preserving detected episode packs
+- Improve TMDB lookup for transliterated titles and expose unmatched-title review links
+- Clean release-group labels and default the library video filter to 2D
+
 * Sun Oct 25 2026 Anatolii Vorona <vorona.tolik@gmail.com> - 0.1.0-6
 - Add an Android VLC launch action for Chromecast playback testing
 

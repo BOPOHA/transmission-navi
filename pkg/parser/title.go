@@ -8,11 +8,20 @@ import (
 )
 
 var (
-	yearPattern = regexp.MustCompile(`(?:^|[ ._\-(])((?:19|20)\d{2})(?:$|[ ._)\]-])`)
-	tagPattern  = regexp.MustCompile(`(?i)\b(?:2160p|1080p|720p|480p|4k|uhd|bluray|blu-ray|bdrip|brrip|web[ ._-]?dl|webrip|hdrip|dvdrip|remux|x26[45]|h[ ._-]?26[45]|hevc|av1|hdr10\+?|hdr|dolby[ ._-]?vision|dovi|aac(?:2\.0)?|ac3|eac3|ddp?\d(?:\.\d)?|dts(?:-hd)?|truehd|atmos|multi|proper|repack|extended|unrated)\b.*$`)
-	spaces      = regexp.MustCompile(`\s+`)
-	nonAlphaNum = regexp.MustCompile(`[^A-Z0-9]+`)
+	yearPattern         = regexp.MustCompile(`(?:^|[ ._\-(])((?:19|20)\d{2})(?:$|[ ._)\]-])`)
+	tagPattern          = regexp.MustCompile(`(?i)\b(?:2160p|1080p|720p|480p|4k|uhd|bluray|blu-ray|bdrip|brrip|web[ ._-]?dl|webrip|hdrip|dvdrip|remux|x26[45]|h[ ._-]?26[45]|hevc|av1|hdr10\+?|hdr|dolby[ ._-]?vision|dovi|aac(?:2\.0)?|ac3|eac3|ddp?\d(?:\.\d)?|dts(?:-hd)?|truehd|atmos|multi|proper|repack|extended|unrated)\b.*$`)
+	releaseGroupPattern = compileReleaseGroupPattern()
+	spaces              = regexp.MustCompile(`\s+`)
+	nonAlphaNum         = regexp.MustCompile(`[^A-Z0-9]+`)
 )
+
+// releaseGroups contains publisher/uploader labels that commonly appear at
+// the end of torrent names but are not part of a movie or series title.
+var releaseGroups = []string{
+	"LostFilm", "teko", "ExKinoRay", "GeneralFilm", "EniaHD", "Jaskier",
+	"RGzsRutracker", "Dalemake", "Nicodem", "Files-x", "ylnian", "il68k",
+	"ad3wal3", "Frost O.S", "kontarik81", "Aleksan55", "HQ-HOME",
+}
 
 var threeDTags = map[string]bool{
 	"3D": true, "SBS": true, "HSBS": true, "FSBS": true,
@@ -29,11 +38,28 @@ func Title(name string) (string, int) {
 	}
 	base = strings.NewReplacer(".", " ", "_", " ", "-", " ").Replace(base)
 	base = tagPattern.ReplaceAllString(base, "")
+	for releaseGroupPattern.MatchString(base) {
+		base = releaseGroupPattern.ReplaceAllString(base, "")
+	}
 	base = spaces.ReplaceAllString(strings.TrimSpace(base), " ")
 	if base == "" {
 		base = strings.TrimSpace(name)
 	}
 	return titleCase(base), year
+}
+
+func compileReleaseGroupPattern() *regexp.Regexp {
+	groups := make([]string, 0, len(releaseGroups))
+	separator := regexp.MustCompile(`[._-]+`)
+	for _, group := range releaseGroups {
+		normalized := separator.ReplaceAllString(group, " ")
+		words := strings.Fields(normalized)
+		for index, word := range words {
+			words[index] = regexp.QuoteMeta(word)
+		}
+		groups = append(groups, strings.Join(words, `\s+`))
+	}
+	return regexp.MustCompile(`(?i)\s+(?:[\[(]\s*)?(?:(?:rip\s+)?by\s+)?(?:` + strings.Join(groups, "|") + `)\s*[\])]?\s*$`)
 }
 
 // Is3D recognizes the common stereoscopic tags used in torrent and media

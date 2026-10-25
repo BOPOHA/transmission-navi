@@ -138,6 +138,8 @@ select:focus { border-color: #69734f; }
 .more { border: 0; padding: 0; color: var(--muted); background: transparent; cursor: pointer; letter-spacing: 1px; }
 .meta { display: flex; gap: 7px; color: var(--muted); font-size: 12px; }
 .tmdb-note { margin: 9px 0 11px; padding: 9px 10px; border: 1px solid #59352e; border-radius: 8px; color: #e7b2a6; background: #211512; overflow-wrap: anywhere; font-size: 10px; line-height: 1.45; }
+.tmdb-note span { display: block; }
+.tmdb-note a { display: inline-block; margin-top: 7px; color: var(--lime); font-weight: 700; }
 .rating:not(:empty), .age:not(:empty) { padding-left: 7px; border-left: 1px solid #3b4139; color: #c9d0c4; }
 .genres { min-height: 20px; display: flex; gap: 5px; overflow: hidden; }
 .genre { flex: 0 0 auto; padding: 3px 7px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 9px; }
@@ -148,7 +150,7 @@ select:focus { border-color: #69734f; }
 .progress-label { color: var(--muted); font-size: 11px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0 13px; border: 1px solid var(--lime); border-radius: 10px; color: #10150a; background: var(--lime); font-size: 12px; font-weight: 700; cursor: pointer; }
-.watch-tv { flex: 1 0 100%; }
+.play-device { flex: 1 0 100%; }
 .play { flex: 1; }
 .button.secondary { color: var(--ink); border-color: var(--line); background: transparent; }
 .button[aria-disabled="true"], .button:disabled { pointer-events: none; color: #747b72; border-color: #2a2e29; background: #20231f; opacity: .8; }

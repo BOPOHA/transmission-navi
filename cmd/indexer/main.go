@@ -53,7 +53,7 @@ func run(configPath string) error {
 	if err := catalog.WriteAtomic(cfg.CatalogPath, output); err != nil {
 		return err
 	}
-	fmt.Printf("indexed %d torrents into %s\n", len(output.Movies), cfg.CatalogPath)
+	fmt.Printf("indexed %d torrents as %d catalog entries into %s\n", len(torrents), len(output.Movies), cfg.CatalogPath)
 	return nil
 }
 

@@ -9,9 +9,11 @@ offline catalog caching, and VLC-compatible playlists.
 ## Current features
 
 - Transmission RPC client with automatic session-ID (`409`) retry
-- Filename cleanup and title/year extraction
+- Filename cleanup, release-group removal, and title/year extraction
+- Separate catalog entries for films bundled in one torrent
 - Automatic 2D/3D classification from common stereoscopic release tags
 - TMDB posters, localized titles, genres, ratings, and age certifications
+- Cyrillic retry for Russian titles stored as Latin transliterations
 - A review shelf for titles that TMDB could not match
 - Persistent TMDB cache (30 days for matches, 7 days for misses)
 - Filesystem-to-SMB path mapping with URL-safe filenames
@@ -128,9 +130,12 @@ Browsers cannot start desktop VLC with an arbitrary SMB URL unless every client
 installs a custom protocol handler. Navi deliberately does not require one.
 Instead, **VLC playlist** downloads a small `.m3u` containing the canonical
 `smb://` URL. Open that playlist with VLC. **Copy link** copies the same SMB URL
-for troubleshooting or manual use. On Android, **Watch on TV** opens the SMB
-movie in VLC; select the Chromecast from VLC's Cast button. Chromecast does not
-open SMB URLs itself, so VLC remains responsible for reading the NAS media.
+for troubleshooting or manual use. On Android, **Play on this device** opens
+the SMB movie in VLC on the current phone or tablet. VLC may then route it to a
+renderer selected inside VLC, but Navi does not select a remote device itself.
+
+The **TMDB not found** shelf shows the parsed lookup name and provides a
+Kinopoisk search link for manual review. Navi does not scrape Kinopoisk pages.
 
 ## Verification
 

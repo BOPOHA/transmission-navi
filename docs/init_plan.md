@@ -57,7 +57,12 @@ ignored by Git.
 ### TMDB enrichment
 
 - Authenticates with TMDB's **API Read Access Token** as a bearer token.
+- Splits multi-film torrents into file-level catalog entries while keeping
+  detected seasons and episode packs grouped.
+- Removes known trailing release-group labels such as `LostFilm` before title
+  matching.
 - Searches by parsed title/year and scores exact-title and exact-year matches.
+- Retries likely Russian transliterations as reconstructed Cyrillic queries.
 - Loads localized title, original title, overview, release year, genres, TMDB
   rating, poster URL, and release certifications.
 - Normalizes supported certifications to `0`, `6`, `12`, `16`, or `18`.
