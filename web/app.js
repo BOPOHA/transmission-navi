@@ -205,7 +205,7 @@
   }
 
   function statusLabel(status) {
-    return { all: "All media", ready: "Ready to play", active: "In progress", stopped: "Stopped", tmdb_not_found: "TMDB not found" }[status] || "All media";
+    return { all: "All media", ready: "Ready to play", active: "In progress", stopped: "Stopped", tmdb_not_found: "Metadata not found" }[status] || "All media";
   }
 
   function ageLabel(age) {
@@ -229,7 +229,8 @@
     if (movie.tmdb_status === "not_found") {
       const tmdbNote = node.querySelector(".tmdb-note");
       const lookup = `${movie.title || "Unknown title"}${movie.year ? ` (${movie.year})` : ""}`;
-      tmdbNote.querySelector("span").textContent = `TMDB did not find “${lookup}”. Source: ${movie.torrent_name}`;
+      const providers = movie.metadata_lookup === "tmdb+poiskkino" ? "TMDB and PoiskKino" : "TMDB";
+      tmdbNote.querySelector("span").textContent = `${providers} did not find “${lookup}”. Source: ${movie.torrent_name}`;
       const kinopoisk = tmdbNote.querySelector("a");
       kinopoisk.href = `https://www.kinopoisk.ru/index.php?kp_query=${encodeURIComponent(lookup)}`;
       tmdbNote.hidden = false;

@@ -14,7 +14,8 @@ offline catalog caching, and VLC-compatible playlists.
 - Automatic 2D/3D classification from common stereoscopic release tags
 - TMDB posters, localized titles, genres, ratings, and age certifications
 - Cyrillic retry for Russian titles stored as Latin transliterations
-- A review shelf for titles that TMDB could not match
+- Optional PoiskKino-to-TMDB resolver for unmatched Russian titles
+- A review shelf for titles that configured metadata providers could not match
 - Persistent TMDB cache (30 days for matches, 7 days for misses)
 - Filesystem-to-SMB path mapping with URL-safe filenames
 - Atomic `catalog.json` publication
@@ -85,6 +86,8 @@ At minimum, set:
 
 Add `tmdb_read_access_token` to enable metadata. Each deployment owner should
 create their own credential using the [TMDB setup guide](docs/tmdb_setup.md).
+An optional `poiskkino_api_token` can resolve remaining Russian titles to TMDB
+IDs; TMDB remains the canonical metadata provider.
 
 Generate the catalog and start the local development preview (Python 3 is used
 only for this preview server):
@@ -116,6 +119,7 @@ All JSON settings can be overridden with environment variables:
 | `tmdb_language` | `NAVI_TMDB_LANGUAGE` | TMDB localization, default `en-US` |
 | `tmdb_cache_path` | `NAVI_TMDB_CACHE_PATH` | Private metadata cache path |
 | `tmdb_enrich_unmapped` | `NAVI_TMDB_ENRICH_UNMAPPED` | Enrich media without an SMB mapping |
+| `poiskkino_api_token` | `NAVI_POISKINO_API_TOKEN` | Optional PoiskKino resolver token |
 | `catalog_path` | `NAVI_CATALOG_PATH` | Generated static catalog path |
 | `media_root` | `NAVI_MEDIA_ROOT` | NAS filesystem root |
 | `smb_prefix` | `NAVI_SMB_PREFIX` | SMB URL corresponding to `media_root` |
@@ -134,7 +138,7 @@ for troubleshooting or manual use. On Android, **Play on this device** opens
 the SMB movie in VLC on the current phone or tablet. VLC may then route it to a
 renderer selected inside VLC, but Navi does not select a remote device itself.
 
-The **TMDB not found** shelf shows the parsed lookup name and provides a
+The **Metadata not found** shelf shows the parsed lookup name and provides a
 Kinopoisk search link for manual review. Navi does not scrape Kinopoisk pages.
 
 ## Verification

@@ -12,7 +12,7 @@ import (
 )
 
 const cacheVersion = 1
-const lookupVersion = 2
+const lookupVersion = 3
 
 type Cache struct {
 	Version int                   `json:"version"`
@@ -53,7 +53,7 @@ func (c *Cache) Get(title string, year int, language string, now time.Time) (Cac
 		return CacheEntry{}, false
 	}
 	// Preserve old positive metadata, but retry misses created before the
-	// transliterated-title fallback was introduced.
+	// title-variant or resolver fallbacks were introduced.
 	if !entry.Found && entry.LookupVersion < lookupVersion {
 		return CacheEntry{}, false
 	}

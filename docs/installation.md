@@ -176,6 +176,7 @@ Update these fields using the pre-install worksheet:
   "tmdb_language": "en-US",
   "tmdb_cache_path": "/var/cache/transmission-navi/tmdb.json",
   "tmdb_enrich_unmapped": false,
+  "poiskkino_api_token": "",
   "catalog_path": "/var/lib/transmission-navi/catalog.json",
   "media_root": "/absolute/NAS/path/to/torrents",
   "smb_prefix": "smb://nas-host/share/torrents/",
@@ -197,8 +198,8 @@ sudo sed -i \
 ```
 
 Replace the uppercase placeholders first. Use `sudoedit` for passwords and the
-TMDB token so they do not appear in process listings or shell history. Confirm
-that the file remains protected:
+TMDB and PoiskKino tokens so they do not appear in process listings or shell
+history. Confirm that the file remains protected:
 
 ```sh
 sudo chown root:transmission /etc/transmission-navi/config.json

@@ -60,6 +60,20 @@ the token there:
 }
 ```
 
+For additional Russian-title resolution, obtain a separate token from the
+[PoiskKino API documentation](https://api.kinopoisk.dev/documentation) and add:
+
+```json
+{
+  "poiskkino_api_token": "your-own-poiskkino-token"
+}
+```
+
+PoiskKino is optional and is used only to resolve a match to a TMDB ID. Navi
+then loads the final title, poster, genres, rating, and certification from
+TMDB. The resolver is a third-party community service rather than an official
+Yandex Kinopoisk API; review its current terms before enabling it.
+
 Run it with `navi-indexer -config config.json`. Environment variables override
 values from the JSON file. With `tmdb_enrich_unmapped` set to `false`, the
 indexer enriches only torrents that map to the configured SMB root. This avoids

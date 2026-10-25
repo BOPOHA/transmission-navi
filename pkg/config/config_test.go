@@ -12,6 +12,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	t.Setenv("NAVI_SMB_PREFIX", "smb://example-nas/media/")
 	t.Setenv("NAVI_CATALOG_PATH", "output/catalog.json")
 	t.Setenv("NAVI_TMDB_READ_ACCESS_TOKEN", "test-token")
+	t.Setenv("NAVI_POISKINO_API_TOKEN", "poisk-token")
 	t.Setenv("NAVI_TMDB_ENRICH_UNMAPPED", "true")
 
 	cfg, err := Load("")
@@ -21,8 +22,19 @@ func TestLoadFromEnvironment(t *testing.T) {
 	if cfg.TransmissionRPC != "http://example.test:9091/transmission/rpc" || cfg.CatalogPath != "output/catalog.json" {
 		t.Fatalf("unexpected config: %#v", cfg)
 	}
-	if cfg.TMDBReadAccessToken != "test-token" || !cfg.TMDBEnrichUnmapped {
+	if cfg.TMDBReadAccessToken != "test-token" || cfg.PoiskKinoAPIToken != "poisk-token" || !cfg.TMDBEnrichUnmapped {
 		t.Fatalf("TMDB environment values were not applied: %#v", cfg)
+	}
+}
+
+func TestPoiskKinoRequiresTMDB(t *testing.T) {
+	t.Setenv("NAVI_TRANSMISSION_RPC", "http://example.test/transmission/rpc")
+	t.Setenv("NAVI_MEDIA_ROOT", "/media/library")
+	t.Setenv("NAVI_SMB_PREFIX", "smb://example-nas/media/")
+	t.Setenv("NAVI_POISKINO_API_TOKEN", "poisk-token")
+
+	if _, err := Load(""); err == nil {
+		t.Fatal("expected PoiskKino without TMDB to be rejected")
 	}
 }
 

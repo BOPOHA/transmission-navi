@@ -10,6 +10,9 @@ import (
 var (
 	filmCountPattern = regexp.MustCompile(`(?i)\s*[\[(]\s*\d+\s+filma?\s*[\])]\s*`)
 	latinWordPattern = regexp.MustCompile(`[A-Za-z]+`)
+	leadingSequence  = regexp.MustCompile(`^0*\d{1,2}\s+`)
+	trailingSequence = regexp.MustCompile(`\s+0*\d{1,2}$`)
+	middleSequence   = regexp.MustCompile(`\s+0*\d{1,2}\s+`)
 )
 
 var russianSequences = []struct {
@@ -94,8 +97,11 @@ func transliterateWord(word string) string {
 	return result.String()
 }
 
-func lookupTitleVariants(title string) []string {
-	variants := make([]string, 0, 4)
+// TitleVariants returns progressively looser search names while preserving the
+// original title first. Numeric prefixes and suffixes in multi-film torrents
+// are often file sequence numbers rather than part of the official title.
+func TitleVariants(title string) []string {
+	variants := make([]string, 0, 8)
 	add := func(value string) {
 		value = strings.TrimSpace(value)
 		for _, existing := range variants {
@@ -110,11 +116,19 @@ func lookupTitleVariants(title string) []string {
 	add(title)
 	cleaned := strings.Join(strings.Fields(filmCountPattern.ReplaceAllString(title, " ")), " ")
 	add(cleaned)
-	if cyrillic, ok := russianTitleVariant(cleaned); ok {
-		add(cyrillic)
+	for _, value := range append([]string(nil), variants...) {
+		add(leadingSequence.ReplaceAllString(value, ""))
+		add(trailingSequence.ReplaceAllString(value, ""))
+		add(middleSequence.ReplaceAllString(value, " "))
 	}
-	if cyrillic, ok := russianTitleVariant(title); ok {
-		add(cyrillic)
+	for _, value := range append([]string(nil), variants...) {
+		if cyrillic, ok := russianTitleVariant(value); ok {
+			add(cyrillic)
+		}
 	}
 	return variants
+}
+
+func lookupTitleVariants(title string) []string {
+	return TitleVariants(title)
 }

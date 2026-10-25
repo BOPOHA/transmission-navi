@@ -63,6 +63,8 @@ ignored by Git.
   matching.
 - Searches by parsed title/year and scores exact-title and exact-year matches.
 - Retries likely Russian transliterations as reconstructed Cyrillic queries.
+- Optionally uses PoiskKino to resolve remaining Russian titles to TMDB IDs;
+  final metadata continues to come from TMDB.
 - Loads localized title, original title, overview, release year, genres, TMDB
   rating, poster URL, and release certifications.
 - Normalizes supported certifications to `0`, `6`, `12`, `16`, or `18`.
@@ -105,7 +107,7 @@ Representative movie data:
   Dexie or other runtime library is required.
 - Provides a compact searchable header, sticky desktop sidebar, mobile filter
   drawer, multi-genre tags, age groups, Transmission states, sorting, active
-  filter chips, 2D/3D selection, an unmatched-TMDB review shelf, responsive
+  filter chips, 2D/3D selection, an unmatched-metadata review shelf, responsive
   cards, and offline catalog fallback.
 - Downloads M3U playlists containing canonical `smb://` URLs and can copy a
   primary SMB URL.
@@ -127,6 +129,7 @@ JSON fields. The current schema is maintained in `config.template.json`:
   "tmdb_language": "en-US",
   "tmdb_cache_path": ".cache/tmdb.json",
   "tmdb_enrich_unmapped": false,
+  "poiskkino_api_token": "",
   "catalog_path": "web/catalog.json",
   "media_root": "/absolute/path/to/torrents",
   "smb_prefix": "smb://nas-host/share/torrents/",

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"github.com/BOPOHA/transmission-navi/internal/buildinfo"
 	"github.com/BOPOHA/transmission-navi/pkg/catalog"
 	"github.com/BOPOHA/transmission-navi/pkg/config"
+	"github.com/BOPOHA/transmission-navi/pkg/poiskkino"
 	"github.com/BOPOHA/transmission-navi/pkg/tmdb"
 	"github.com/BOPOHA/transmission-navi/pkg/transmission"
 )
@@ -63,18 +65,39 @@ func enrichTMDB(output *catalog.Catalog, cfg config.Config, httpClient *http.Cli
 		return err
 	}
 	client := tmdb.New(cfg.TMDBReadAccessToken, cfg.TMDBLanguage, httpClient)
+	var resolver *poiskkino.Client
+	if cfg.PoiskKinoAPIToken != "" {
+		resolver = poiskkino.New(cfg.PoiskKinoAPIToken, httpClient)
+	}
 	now := time.Now()
-	enriched, cacheHits, notFound, failures := 0, 0, 0, 0
+	enriched, cacheHits, notFound, failures, resolved := 0, 0, 0, 0, 0
+	cacheProfile := cfg.MetadataCacheProfile()
 	for index := range output.Movies {
 		movie := &output.Movies[index]
+		movie.MetadataLookup = "tmdb"
+		if resolver != nil {
+			movie.MetadataLookup = "tmdb+poiskkino"
+		}
 		if !cfg.TMDBEnrichUnmapped && movie.PrimaryPlayURL == "" {
 			movie.TMDBStatus = "not_checked"
 			continue
 		}
-		entry, cached := cache.Get(movie.Title, movie.Year, cfg.TMDBLanguage, now)
+		entry, cached := cache.Get(movie.Title, movie.Year, cacheProfile, now)
+		if !cached && resolver != nil {
+			// Enabling the resolver should retain existing successful TMDB
+			// entries while retrying only previous misses through PoiskKino.
+			if tmdbEntry, tmdbCached := cache.Get(movie.Title, movie.Year, cfg.TMDBLanguage, now); tmdbCached && tmdbEntry.Found {
+				entry, cached = tmdbEntry, true
+				cache.Put(movie.Title, movie.Year, cacheProfile, entry.Metadata, true, now)
+			}
+		}
 		if cached {
 			cacheHits++
 			if entry.Found {
+				if entry.Metadata.Source == "" {
+					entry.Metadata.Source = "tmdb"
+					cache.Put(movie.Title, movie.Year, cacheProfile, entry.Metadata, true, now)
+				}
 				applyTMDB(movie, entry.Metadata)
 				movie.TMDBStatus = "matched"
 				enriched++
@@ -86,13 +109,32 @@ func enrichTMDB(output *catalog.Catalog, cfg config.Config, httpClient *http.Cli
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), cfg.RequestTimeout())
 		metadata, lookupErr := client.Lookup(ctx, movie.Title, movie.Year)
+		if errors.Is(lookupErr, tmdb.ErrNotFound) && resolver != nil {
+			match, resolveErr := resolver.Resolve(ctx, tmdb.TitleVariants(movie.Title), movie.Year)
+			switch {
+			case resolveErr == nil:
+				metadata, lookupErr = client.LookupByID(ctx, match.TMDBID)
+				if lookupErr == nil {
+					metadata.Source = "poiskkino+tmdb"
+					metadata.PoiskKinoID = match.ID
+					resolved++
+				}
+			case errors.Is(resolveErr, poiskkino.ErrNotFound):
+				lookupErr = tmdb.ErrNotFound
+			default:
+				lookupErr = fmt.Errorf("resolve with PoiskKino: %w", resolveErr)
+			}
+		}
 		cancel()
 		if lookupErr != nil {
 			if tmdb.IsAuthenticationError(lookupErr) {
 				return fmt.Errorf("authenticate with TMDB: %w", lookupErr)
 			}
+			if poiskkino.IsAuthenticationError(lookupErr) {
+				return fmt.Errorf("authenticate with PoiskKino: %w", lookupErr)
+			}
 			if lookupErr == tmdb.ErrNotFound {
-				cache.Put(movie.Title, movie.Year, cfg.TMDBLanguage, tmdb.Metadata{}, false, now)
+				cache.Put(movie.Title, movie.Year, cacheProfile, tmdb.Metadata{}, false, now)
 				movie.TMDBStatus = "not_found"
 				notFound++
 				continue
@@ -102,7 +144,7 @@ func enrichTMDB(output *catalog.Catalog, cfg config.Config, httpClient *http.Cli
 			log.Printf("TMDB lookup failed for %q: %v", movie.Title, lookupErr)
 			continue
 		}
-		cache.Put(movie.Title, movie.Year, cfg.TMDBLanguage, metadata, true, now)
+		cache.Put(movie.Title, movie.Year, cacheProfile, metadata, true, now)
 		applyTMDB(movie, metadata)
 		movie.TMDBStatus = "matched"
 		enriched++
@@ -110,7 +152,7 @@ func enrichTMDB(output *catalog.Catalog, cfg config.Config, httpClient *http.Cli
 	if err := cache.WriteAtomic(cfg.TMDBCachePath); err != nil {
 		return err
 	}
-	fmt.Printf("TMDB: enriched %d movies (%d cache hits, %d not found, %d transient failures)\n", enriched, cacheHits, notFound, failures)
+	fmt.Printf("TMDB: enriched %d movies (%d cache hits, %d resolved by PoiskKino, %d not found, %d transient failures)\n", enriched, cacheHits, resolved, notFound, failures)
 	return nil
 }
 
@@ -129,4 +171,6 @@ func applyTMDB(movie *catalog.Movie, metadata tmdb.Metadata) {
 	movie.MinAge = metadata.MinAge
 	movie.Certification = metadata.Certification
 	movie.PosterURL = metadata.PosterURL
+	movie.MetadataSource = metadata.Source
+	movie.PoiskKinoID = metadata.PoiskKinoID
 }

@@ -81,3 +81,40 @@ func TestLookupRetriesRussianTransliteration(t *testing.T) {
 		t.Fatalf("unexpected fallback: metadata=%#v queries=%#v", metadata, queries)
 	}
 }
+
+func TestBestMatchPrefersReleaseYearOverWrongExactTitle(t *testing.T) {
+	results := []searchResult{
+		{ID: 1, Title: "Semejka Addams 2", ReleaseDate: "1991-01-01"},
+		{ID: 2, Title: "Addams Family Values", ReleaseDate: "1993-01-01"},
+	}
+	if got := bestMatch(results, "Semejka Addams 2", 1993); got.ID != 2 {
+		t.Fatalf("wrong release selected: %#v", got)
+	}
+}
+
+func TestLookupContinuesAfterWeakSearchResults(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/search/movie":
+			if r.URL.Query().Get("query") == "Semejka Addams" {
+				_, _ = w.Write([]byte(`{"results":[{"id":2907,"title":"The Addams Family","release_date":"1991-11-22"}]}`))
+			} else {
+				_, _ = w.Write([]byte(`{"results":[{"id":99,"title":"Unrelated","release_date":"2020-01-01"}]}`))
+			}
+		case "/movie/2907":
+			_, _ = w.Write([]byte(`{"id":2907,"title":"The Addams Family","release_date":"1991-11-22","genres":[],"release_dates":{"results":[]}}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	metadata, err := NewWithBaseURL(server.URL, "token", "en-US", server.Client()).Lookup(context.Background(), "Semejka Addams 1", 1991)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if metadata.ID != 2907 {
+		t.Fatalf("unexpected metadata: %#v", metadata)
+	}
+}

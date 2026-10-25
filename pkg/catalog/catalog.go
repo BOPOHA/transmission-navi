@@ -58,6 +58,9 @@ type Movie struct {
 	PosterURL      string   `json:"poster_url,omitempty"`
 	TMDBID         int      `json:"tmdb_id,omitempty"`
 	TMDBStatus     string   `json:"tmdb_status,omitempty"`
+	MetadataSource string   `json:"metadata_source,omitempty"`
+	MetadataLookup string   `json:"metadata_lookup,omitempty"`
+	PoiskKinoID    int      `json:"poiskkino_id,omitempty"`
 	VideoMode      string   `json:"video_mode"`
 	DownloadDir    string   `json:"download_dir"`
 	Finished       bool     `json:"finished"`

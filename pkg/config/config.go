@@ -20,6 +20,7 @@ type Config struct {
 	TMDBLanguage          string `json:"tmdb_language"`
 	TMDBCachePath         string `json:"tmdb_cache_path"`
 	TMDBEnrichUnmapped    bool   `json:"tmdb_enrich_unmapped"`
+	PoiskKinoAPIToken     string `json:"poiskkino_api_token,omitempty"`
 	CatalogPath           string `json:"catalog_path"`
 	MediaRoot             string `json:"media_root"`
 	SMBPrefix             string `json:"smb_prefix"`
@@ -51,6 +52,7 @@ func Load(filename string) (Config, error) {
 	applyEnv("NAVI_TMDB_READ_ACCESS_TOKEN", &cfg.TMDBReadAccessToken)
 	applyEnv("NAVI_TMDB_LANGUAGE", &cfg.TMDBLanguage)
 	applyEnv("NAVI_TMDB_CACHE_PATH", &cfg.TMDBCachePath)
+	applyEnv("NAVI_POISKINO_API_TOKEN", &cfg.PoiskKinoAPIToken)
 	applyEnv("NAVI_CATALOG_PATH", &cfg.CatalogPath)
 	applyEnv("NAVI_MEDIA_ROOT", &cfg.MediaRoot)
 	applyEnv("NAVI_SMB_PREFIX", &cfg.SMBPrefix)
@@ -99,10 +101,21 @@ func (c Config) Validate() error {
 			return errors.New("tmdb_cache_path is required when a TMDB token is configured")
 		}
 	}
+	if strings.TrimSpace(c.PoiskKinoAPIToken) != "" && strings.TrimSpace(c.TMDBReadAccessToken) == "" {
+		return errors.New("poiskkino_api_token requires tmdb_read_access_token")
+	}
 	if c.RequestTimeoutSeconds < 0 {
 		return errors.New("request_timeout_seconds cannot be negative")
 	}
 	return nil
+}
+
+func (c Config) MetadataCacheProfile() string {
+	profile := c.TMDBLanguage
+	if strings.TrimSpace(c.PoiskKinoAPIToken) != "" {
+		profile += "+poiskkino"
+	}
+	return profile
 }
 
 func (c Config) RequestTimeout() time.Duration {

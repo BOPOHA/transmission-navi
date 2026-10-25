@@ -53,6 +53,8 @@ type Metadata struct {
 	PosterURL     string   `json:"poster_url,omitempty"`
 	MinAge        *int     `json:"min_age,omitempty"`
 	Certification string   `json:"certification,omitempty"`
+	Source        string   `json:"source,omitempty"`
+	PoiskKinoID   int      `json:"poiskkino_id,omitempty"`
 }
 
 type searchResult struct {
@@ -106,7 +108,7 @@ func (c *Client) Lookup(ctx context.Context, title string, year int) (Metadata, 
 	var match searchResult
 	found := false
 	for _, candidate := range lookupTitleVariants(title) {
-		query := url.Values{"query": {candidate}, "language": {c.language}}
+		query := url.Values{"query": {candidate}, "language": {searchLanguage(candidate)}}
 		if year > 0 {
 			query.Set("year", strconv.Itoa(year))
 		}
@@ -115,24 +117,37 @@ func (c *Client) Lookup(ctx context.Context, title string, year int) (Metadata, 
 			return Metadata{}, err
 		}
 		if len(search.Results) != 0 {
-			match = bestMatch(search.Results, candidate, year)
-			found = true
-			break
+			candidateMatch, score := scoredBestMatch(search.Results, candidate, year)
+			minimum := 90
+			if year > 0 {
+				minimum = 140
+			}
+			if score >= minimum {
+				match, found = candidateMatch, true
+				break
+			}
 		}
 	}
 	if !found {
 		return Metadata{}, ErrNotFound
 	}
 
+	return c.LookupByID(ctx, match.ID)
+}
+
+func (c *Client) LookupByID(ctx context.Context, id int) (Metadata, error) {
+	if id <= 0 {
+		return Metadata{}, ErrNotFound
+	}
 	query := url.Values{"language": {c.language}, "append_to_response": {"release_dates"}}
 	var details detailsResponse
-	if err := c.get(ctx, "/movie/"+strconv.Itoa(match.ID), query, &details); err != nil {
+	if err := c.get(ctx, "/movie/"+strconv.Itoa(id), query, &details); err != nil {
 		return Metadata{}, err
 	}
 	metadata := Metadata{
 		ID: details.ID, Title: details.Title, OriginalTitle: details.OriginalTitle,
 		Overview: details.Overview, Year: releaseYear(details.ReleaseDate),
-		Rating: details.VoteAverage, Genres: make([]string, 0, len(details.Genres)),
+		Rating: details.VoteAverage, Genres: make([]string, 0, len(details.Genres)), Source: "tmdb",
 	}
 	for _, genre := range details.Genres {
 		metadata.Genres = append(metadata.Genres, genre.Name)
@@ -142,6 +157,13 @@ func (c *Client) Lookup(ctx context.Context, title string, year int) (Metadata, 
 	}
 	metadata.Certification, metadata.MinAge = certification(details)
 	return metadata, nil
+}
+
+func searchLanguage(title string) string {
+	if strings.IndexFunc(title, func(r rune) bool { return unicode.In(r, unicode.Cyrillic) }) >= 0 {
+		return "ru-RU"
+	}
+	return "en-US"
 }
 
 func (c *Client) get(ctx context.Context, endpoint string, query url.Values, target any) error {
@@ -167,6 +189,11 @@ func (c *Client) get(ctx context.Context, endpoint string, query url.Values, tar
 }
 
 func bestMatch(results []searchResult, title string, year int) searchResult {
+	best, _ := scoredBestMatch(results, title, year)
+	return best
+}
+
+func scoredBestMatch(results []searchResult, title string, year int) (searchResult, int) {
 	wanted := normalize(title)
 	best, bestScore := results[0], -1<<30
 	for index, result := range results {
@@ -176,19 +203,19 @@ func bestMatch(results []searchResult, title string, year int) searchResult {
 		}
 		resultYear := releaseYear(result.ReleaseDate)
 		if year > 0 && resultYear == year {
-			score += 50
+			score += 150
 		} else if year > 0 && resultYear > 0 {
 			delta := resultYear - year
 			if delta < 0 {
 				delta = -delta
 			}
-			score -= delta * 5
+			score -= 100 + delta*5
 		}
 		if score > bestScore {
 			best, bestScore = result, score
 		}
 	}
-	return best
+	return best, bestScore
 }
 
 func normalize(value string) string {
