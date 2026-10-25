@@ -1,0 +1,20 @@
+# Navi deliberately reuses the account supplied by transmission-daemon. RPM's
+# generated user/group dependencies guarantee that it exists before unpacking.
+addFilter(r"transmission-navi.*: W: non-standard-uid /var/(cache|lib)/transmission-navi transmission")
+addFilter(r"transmission-navi.*: W: non-standard-gid /(etc/transmission-navi/config.json|var/(cache|lib)/transmission-navi) transmission")
+
+# The TMDB cache may contain private metadata and remains non-traversable. The
+# catalog directory is 0755 because Transmission follows the packaged catalog
+# symlink and must be able to read its deliberately public 0644 JSON file.
+addFilter(r"transmission-navi.*: E: non-standard-dir-perm /var/cache/transmission-navi 750")
+
+# config.json can contain RPC credentials and the TMDB token. It is deliberately
+# readable only by root and the dedicated service group.
+addFilter(r"transmission-navi.*: E: non-readable /etc/transmission-navi/config.json 640")
+
+# The indexer's first successful run atomically creates this runtime file. The
+# relative link keeps generated state out of /usr while Transmission serves it.
+addFilter(r"transmission-navi.*: W: dangling-relative-symlink /usr/share/transmission/public_html/navi/catalog.json ../../../../../var/lib/transmission-navi/catalog.json")
+
+# rpkg replaces these macro-generated sources with local deterministic archives.
+addFilter(r"transmission-navi.spec: W: invalid-url Source[01]: transmission-navi.*")

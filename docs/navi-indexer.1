@@ -1,0 +1,57 @@
+.TH NAVI-INDEXER 1 "October 2026" "transmission-navi 0.1.0" "User Commands"
+.SH NAME
+navi-indexer \- generate a static media catalog from Transmission RPC
+.SH SYNOPSIS
+.B navi-indexer
+.RB [ \-config " file" ]
+.RB [ \-version ]
+.SH DESCRIPTION
+.B navi-indexer
+queries a Transmission RPC endpoint, parses torrent and file names, maps NAS
+filesystem paths to SMB URLs, optionally enriches movies through TMDB, and
+atomically writes a JSON catalog for the Transmission Navi web interface.
+.PP
+The program performs one refresh and exits. The packaged systemd timer invokes
+it every 15 minutes.
+.SH OPTIONS
+.TP
+.BI \-config " file"
+Read JSON configuration from
+.IR file .
+Environment variables override corresponding JSON values.
+.TP
+.B \-version
+Print the program version and exit.
+.SH FILES
+.TP
+.I /etc/transmission-navi/config.json
+Packaged configuration. It can contain credentials and must remain protected.
+.TP
+.I /var/lib/transmission-navi/catalog.json
+Default generated catalog.
+.TP
+.I /var/cache/transmission-navi/tmdb.json
+Default TMDB metadata cache.
+.TP
+.I /usr/share/transmission/public_html/navi/
+Static Navi interface served by Transmission. Its
+.I catalog.json
+entry links to the generated catalog under
+.IR /var/lib/transmission-navi/ .
+.SH SYSTEMD
+.TP
+.B transmission-navi-indexer.service
+Runs one refresh.
+.TP
+.B transmission-navi-indexer.timer
+Schedules periodic refreshes.
+.SH SECURITY
+The catalog contains media titles and SMB paths. Restrict Transmission to a
+trusted network and enable its authentication when appropriate. Never place
+Transmission or TMDB credentials in the static web directory or catalog.
+.SH SEE ALSO
+.BR systemctl (1),
+.BR vlc (1)
+.PP
+Full installation and troubleshooting documentation is installed under
+.IR /usr/share/doc/transmission-navi/ .

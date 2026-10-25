@@ -1,0 +1,13 @@
+{
+  "transmission_rpc": "http://nas-host:9091/transmission/rpc",
+  "transmission_username": "",
+  "transmission_password": "",
+  "tmdb_read_access_token": "",
+  "tmdb_language": "en-US",
+  "tmdb_cache_path": ".cache/tmdb.json",
+  "tmdb_enrich_unmapped": false,
+  "catalog_path": "web/catalog.json",
+  "media_root": "/absolute/path/to/torrents",
+  "smb_prefix": "smb://nas-host/share/torrents/",
+  "request_timeout_seconds": 15
+}

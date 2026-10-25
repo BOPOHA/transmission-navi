@@ -1,0 +1,13 @@
+/bin/
+/dist/
+/rpmbuild/
+/rpm-results/
+/vendor/
+/web/catalog.json
+/.cache/
+/.idea/
+/config.local.json
+/config.json
+/.env
+*.rpm
+*.tmp

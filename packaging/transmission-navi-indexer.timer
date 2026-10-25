@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh the Transmission Navi catalog every 15 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Persistent=true
+Unit=transmission-navi-indexer.service
+
+[Install]
+WantedBy=timers.target

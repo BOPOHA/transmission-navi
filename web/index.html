@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111311">
+  <title>Navi — Transmission library</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Navi home"><span class="brand-mark">N</span><span>Navi</span></a>
+    <div class="header-intro">
+      <p class="eyebrow">Your Transmission library</p>
+      <div class="header-copy"><h1>Find it. Press play.</h1><span>Everything on the NAS, shaped into one calm shelf.</span></div>
+    </div>
+    <label class="search-wrap header-search">
+      <span class="sr-only">Search titles and files</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.3-4.3m2.3-5.2a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/></svg>
+      <input id="search" type="search" placeholder="Search your library" autocomplete="off">
+    </label>
+    <div class="sync-state"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Loading library…</span></div>
+  </header>
+
+  <main>
+    <section class="toolbar catalog-controls" aria-label="Catalog controls">
+      <div class="selects">
+        <button id="open-filters" class="filter-trigger" type="button" aria-controls="filter-sidebar" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg>
+          Filters <span id="filter-count" hidden>0</span>
+        </button>
+        <label><span class="sr-only">Sort catalog</span><select id="sort"><option value="added">Recently added</option><option value="title">Title A–Z</option><option value="year">Newest releases</option><option value="progress">Download progress</option></select></label>
+      </div>
+    </section>
+
+    <div class="library-layout">
+      <aside id="filter-sidebar" class="filter-sidebar" aria-label="Catalog filters">
+        <div class="sidebar-head">
+          <div><p class="eyebrow">Discover</p><h2>Browse</h2></div>
+          <button id="close-filters" class="close-filters" type="button" aria-label="Close filters">×</button>
+        </div>
+
+        <nav class="browse-list" aria-label="Library categories">
+          <button class="browse-option active" type="button" data-status="all"><span>All media</span><span class="option-count" data-count="all">0</span></button>
+          <button class="browse-option" type="button" data-status="ready"><span><i class="option-dot ready"></i>Ready to play</span><span class="option-count" data-count="ready">0</span></button>
+          <button class="browse-option" type="button" data-status="active"><span><i class="option-dot active"></i>In progress</span><span class="option-count" data-count="active">0</span></button>
+          <button class="browse-option" type="button" data-status="stopped"><span><i class="option-dot stopped"></i>Stopped</span><span class="option-count" data-count="stopped">0</span></button>
+        </nav>
+
+        <section class="filter-group">
+          <div class="filter-group-head"><h3>Genres</h3><button id="clear-genres" type="button" hidden>Clear</button></div>
+          <div id="genre-filters" class="genre-filters"></div>
+        </section>
+
+        <section class="filter-group">
+          <h3>Age category</h3>
+          <div class="age-filters">
+            <button class="age-option active" type="button" data-age="all">Any rating</button>
+            <button class="age-option" type="button" data-age="6">Kids · up to 6</button>
+            <button class="age-option" type="button" data-age="12">Family · up to 12</button>
+            <button class="age-option" type="button" data-age="16">Teen · up to 16</button>
+            <button class="age-option" type="button" data-age="18">Adults only · 18</button>
+            <button class="age-option" type="button" data-age="unrated">Not rated</button>
+          </div>
+        </section>
+
+        <button id="clear-all" class="clear-all" type="button" disabled>Clear all filters</button>
+      </aside>
+      <button id="filter-scrim" class="filter-scrim" type="button" aria-label="Close filters" tabindex="-1"></button>
+
+      <div class="library-content">
+        <section class="library-heading">
+          <div><p class="eyebrow">Library</p><h2 id="result-title">All media</h2></div>
+          <span id="result-count">0 titles</span>
+        </section>
+        <div id="active-filters" class="active-filters" aria-label="Active filters"></div>
+        <section id="catalog" class="catalog" aria-live="polite"></section>
+        <section id="empty" class="empty" hidden><div class="empty-icon">⌁</div><h2>Nothing on this shelf</h2><p>Try a different search or filter.</p></section>
+      </div>
+    </div>
+  </main>
+
+  <template id="card-template">
+    <article class="card">
+      <div class="cover"><img class="cover-poster" alt="" loading="lazy"><div class="cover-grain"></div><span class="cover-year"></span><span class="cover-letter"></span><div class="progress"><span></span></div></div>
+      <div class="card-body">
+        <div class="card-title-row"><h3></h3><button class="more" type="button" aria-label="Show files">•••</button></div>
+        <p class="meta"><span class="year"></span><span class="dot">•</span><span class="size"></span><span class="rating"></span><span class="age"></span></p>
+        <div class="genres"></div>
+        <div class="status-row"><span class="badge"></span><span class="progress-label"></span></div>
+        <div class="actions"><button class="play button" type="button">VLC playlist</button><button class="copy-link button secondary" type="button">Copy link</button></div>
+        <div class="files" hidden></div>
+      </div>
+    </article>
+  </template>
+  <script src="app.js" defer></script>
+</body>
+</html>
